@@ -115,6 +115,131 @@ std::string dump(Any myAny) {
     std::string str(buf.GetString());
     return str;
 }
+
+void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, Document::AllocatorType& allocator) {
+    myValue.SetObject();
+    Value nameValue(kStringType);
+    nameValue.SetString(myName.c_str(), allocator);
+    if (myAny.type() == typeid(int)) {
+        Value intValue(kNumberType);
+        intValue.SetInt(any_cast<int>(myAny));
+        if(myName.empty()){
+            myValue.AddMember("Int", intValue, allocator);
+        }
+        else{
+            myValue.AddMember(nameValue, intValue, allocator);
+        }
+    }
+    else if (myAny.type() == typeid(std::string)) {
+        Value strValue(kStringType);
+        strValue.SetString(any_cast<std::string>(myAny).c_str(), allocator);
+        if(myName.empty()){
+            myValue.AddMember("String", strValue, allocator);
+        }
+        else{
+            myValue.AddMember(nameValue, strValue, allocator);
+        }
+    }
+    else if (myAny.type() == typeid(Person)) {
+        Person tmpPerson = any_cast<Person>(myAny);
+        Value personValue;
+        personValue.SetObject();
+
+        dumpElements2(tmpPerson.name, "name", personValue, allocator);
+        dumpElements2(tmpPerson.age, "age", personValue, allocator);
+        dumpElements2(tmpPerson.address, "address", personValue, allocator);
+
+        Value friendsArrayValue(kArrayType);
+        for (int i = 0; i < tmpPerson._friends.size(); i++) {
+            Friend& tmpFriend = tmpPerson._friends[i];
+            dumpElements2(tmpFriend, "", friendsArrayValue, allocator);
+        }
+        personValue.AddMember("_friends", friendsArrayValue, allocator);
+
+        Value secretValue;
+        secretValue.SetObject();
+        Any& tmpAny = tmpPerson.secret;
+        dumpElements2(tmpAny, "secret", personValue, allocator);
+        
+        if(myName.empty()){
+            myValue.AddMember("Person", personValue, allocator);
+        }
+        else {
+            myValue.AddMember(nameValue, personValue, allocator);
+        }
+    }
+    else if (myAny.type() == typeid(Friend)) {
+        Friend tmpFriend = any_cast<Friend>(myAny);
+        Value friendValue;
+        friendValue.SetObject();
+
+        dumpElements2(tmpFriend.relation, "relation", friendValue, allocator);
+
+        Value secretValue;
+        secretValue.SetObject();
+        Any& tmpAny = tmpFriend.secret;
+        dumpElements2(tmpAny, "secret", friendValue, allocator);
+
+        if(myName.empty()){
+            myValue.AddMember("Friend", friendValue, allocator);
+        }
+        else {
+            myValue.AddMember(nameValue, friendValue, allocator);
+        }
+    }
+    else if (myAny.type() == typeid(Address)) {
+        Address tmpAddress = any_cast<Address>(myAny);
+        Value addressValue;
+        addressValue.SetObject();
+        
+        dumpElements2(tmpAddress.country, "country", addressValue, allocator);
+
+        dumpElements2(tmpAddress.city, "city", addressValue, allocator);
+        dumpElements2(tmpAddress.street, "street", addressValue, allocator);
+
+        Value neighborsArrayValue(kArrayType);
+        for (int i = 0; i < tmpAddress.neighbors.size(); i++) {
+            Person& tmpNeighbor = tmpAddress.neighbors[i];
+            dumpElements2(tmpNeighbor, "", neighborsArrayValue, allocator);
+        }
+        addressValue.AddMember("neighbors", neighborsArrayValue, allocator);
+        
+        if(myName.empty()){
+            myValue.AddMember("Address", addressValue, allocator);
+        }
+        else {
+            myValue.AddMember(nameValue, addressValue, allocator);
+        }
+    }
+    else if (myAny.type() == typeid(Singer)) {
+        Singer tmpSinger = any_cast<Singer>(myAny);
+        Value singerValue;
+        singerValue.SetObject();
+
+        dumpElements2(tmpSinger.type, "type", singerValue, allocator);
+        dumpElements2(tmpSinger.age, "age", singerValue, allocator);
+
+        if(myName.empty()){
+            myValue.AddMember("Singer", singerValue, allocator);
+        }
+        else {
+            myValue.AddMember(nameValue, singerValue, allocator);
+        }
+    }
+}
+
+std::string dump2(Any myAny) {
+    Document doc;
+    Document::AllocatorType& allocator = doc.GetAllocator();
+    Value& docValue = doc.SetObject();//实例化一个GenericValue到根DOM
+    dumpElements2(myAny, "", docValue, allocator);
+
+    StringBuffer strBuffer;
+    PrettyWriter<StringBuffer> writer(strBuffer);
+    doc.Accept(writer);
+    return strBuffer.GetString();
+}
+
 void parseElements(const rapidjson::Value& obj, Any *pAny) {
     if (pAny->type() == typeid(Person)) {
         const rapidjson::Value& objPerson = obj["Person"];
@@ -168,8 +293,11 @@ int main()
     Person p2{ "p2", 3, Address{"china", "shanghai", "putuo"} };
     Address addr1{ "china", "beijing", "wangjing", {p2} };
     Person p1{ "p1", 4, addr1, {f1, f2, f3}, std::string("the kind!") };
-    // TODO. 以下是伪代码，需要笔试者具体实现
-    auto json1 = dump(p1);               // 序列化    
+
+
+
+    auto json1 = dump(p1);               // 序列化   
+    auto json2 = dump2(p1); 
     std::cout << "打印序列化结果" << std::endl;
     std::cout << json1 << std::endl;     // 打印序列化结果
     std::cout << "打印Person对象" <<std::endl;
@@ -179,3 +307,4 @@ int main()
     std::cout << (Any)pp << std::endl;    // 打印 Person 对象 
     // assert(p1 == pp)                 // 反序列化的结果是对的
 }
+
