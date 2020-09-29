@@ -16,22 +16,22 @@ using namespace std;
 using namespace rapidjson;
 
 struct Person;
-struct Singer { 
+struct Singer {
     std::string type;
     int age;
 };
-struct Address { 
+struct Address {
     std::string country;
     std::string city;
     std::string street;
     std::vector<Person> neighbors;
 };
 
-struct Friend { 
+struct Friend {
     std::string relation;
     Any secret;
 };
-struct Person { 
+struct Person {
     std::string name;
     int age;
     Address address;
@@ -117,26 +117,28 @@ std::string dump(Any myAny) {
 }
 
 void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, Document::AllocatorType& allocator) {
-    myValue.SetObject();
+    //myValue.SetObject();
     Value nameValue(kStringType);
     nameValue.SetString(myName.c_str(), allocator);
     if (myAny.type() == typeid(int)) {
         Value intValue(kNumberType);
+        //intValue.SetObject();
         intValue.SetInt(any_cast<int>(myAny));
-        if(myName.empty()){
+        if (myName.empty()) {
             myValue.AddMember("Int", intValue, allocator);
         }
-        else{
+        else {
             myValue.AddMember(nameValue, intValue, allocator);
         }
     }
     else if (myAny.type() == typeid(std::string)) {
         Value strValue(kStringType);
+        //strValue.SetObject();
         strValue.SetString(any_cast<std::string>(myAny).c_str(), allocator);
-        if(myName.empty()){
+        if (myName.empty()) {
             myValue.AddMember("String", strValue, allocator);
         }
-        else{
+        else {
             myValue.AddMember(nameValue, strValue, allocator);
         }
     }
@@ -152,7 +154,11 @@ void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, 
         Value friendsArrayValue(kArrayType);
         for (int i = 0; i < tmpPerson._friends.size(); i++) {
             Friend& tmpFriend = tmpPerson._friends[i];
-            dumpElements2(tmpFriend, "", friendsArrayValue, allocator);
+            Value friendValue;
+            friendValue.SetObject();
+            dumpElements2(tmpFriend, "", friendValue, allocator);
+     //     dumpElements2(tmpFriend, "", friendsArrayValue, allocator);
+            friendsArrayValue.PushBack(friendValue, allocator);
         }
         personValue.AddMember("_friends", friendsArrayValue, allocator);
 
@@ -160,8 +166,8 @@ void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, 
         secretValue.SetObject();
         Any& tmpAny = tmpPerson.secret;
         dumpElements2(tmpAny, "secret", personValue, allocator);
-        
-        if(myName.empty()){
+
+        if (myName.empty()) {
             myValue.AddMember("Person", personValue, allocator);
         }
         else {
@@ -180,7 +186,7 @@ void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, 
         Any& tmpAny = tmpFriend.secret;
         dumpElements2(tmpAny, "secret", friendValue, allocator);
 
-        if(myName.empty()){
+        if (myName.empty()) {
             myValue.AddMember("Friend", friendValue, allocator);
         }
         else {
@@ -191,20 +197,22 @@ void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, 
         Address tmpAddress = any_cast<Address>(myAny);
         Value addressValue;
         addressValue.SetObject();
-        
-        dumpElements2(tmpAddress.country, "country", addressValue, allocator);
 
+        dumpElements2(tmpAddress.country, "country", addressValue, allocator);
         dumpElements2(tmpAddress.city, "city", addressValue, allocator);
         dumpElements2(tmpAddress.street, "street", addressValue, allocator);
 
         Value neighborsArrayValue(kArrayType);
         for (int i = 0; i < tmpAddress.neighbors.size(); i++) {
             Person& tmpNeighbor = tmpAddress.neighbors[i];
-            dumpElements2(tmpNeighbor, "", neighborsArrayValue, allocator);
+            Value neighborValue;
+            neighborValue.SetObject();
+            dumpElements2(tmpNeighbor, "", neighborValue, allocator);
+            neighborsArrayValue.PushBack(neighborValue, allocator);
         }
         addressValue.AddMember("neighbors", neighborsArrayValue, allocator);
-        
-        if(myName.empty()){
+
+        if (myName.empty()) {
             myValue.AddMember("Address", addressValue, allocator);
         }
         else {
@@ -219,19 +227,19 @@ void dumpElements2(const Any& myAny, const std::string& myName, Value& myValue, 
         dumpElements2(tmpSinger.type, "type", singerValue, allocator);
         dumpElements2(tmpSinger.age, "age", singerValue, allocator);
 
-        if(myName.empty()){
-            myValue.AddMember("Singer", singerValue, allocator);
+        if (myName.empty()) {
+            myValue .AddMember("Singer", singerValue, allocator);
         }
         else {
             myValue.AddMember(nameValue, singerValue, allocator);
         }
     }
 }
-
+// https://blog.csdn.net/weixin_41534481/article/details/108327885
 std::string dump2(Any myAny) {
     Document doc;
-    Document::AllocatorType& allocator = doc.GetAllocator();
     Value& docValue = doc.SetObject();//实例化一个GenericValue到根DOM
+    Document::AllocatorType& allocator = doc.GetAllocator();
     dumpElements2(myAny, "", docValue, allocator);
 
     StringBuffer strBuffer;
@@ -240,7 +248,7 @@ std::string dump2(Any myAny) {
     return strBuffer.GetString();
 }
 
-void parseElements(const rapidjson::Value& obj, Any *pAny) {
+void parseElements(const rapidjson::Value& obj, Any* pAny) {
     if (pAny->type() == typeid(Person)) {
         const rapidjson::Value& objPerson = obj["Person"];
         Person tmpPerson = any_cast<Person>(*pAny);
@@ -253,19 +261,20 @@ void parseElements(const rapidjson::Value& obj, Any *pAny) {
         if (objPerson.HasMember("address") && objPerson["address"].IsObject()) {
             const rapidjson::Value& objAddress = objPerson["address"];
             Address tmpAddress;
-            parseElements(objAddress, (Any *)(&tmpAddress));
+            parseElements(objAddress, (Any*)(&tmpAddress));
             tmpPerson.address = tmpAddress;
         }
         if (objPerson.HasMember("_friends") && objPerson["_friends"].IsArray()) {
             const rapidjson::Value& objFriends = objPerson["_friends"];
             Friend tmpFriend;
             for (int i = 0; i < objFriends.Size(); ++i) {
-            //    parseElements(objFriends[i], (Any*)(&tmpFriend));
+                parseElements(objFriends[i], (Any*)(&tmpFriend));
                 tmpPerson._friends.push_back(tmpFriend);
             }
         }
     }
     else if (pAny->type() == typeid(Friend)) {
+        int i = 0;
     }
 }
 Any parse(string json) {
@@ -273,7 +282,7 @@ Any parse(string json) {
     rapidjson::Document dom;
     if (!dom.Parse(json.c_str()).HasParseError()) {
         //推测对象具体类型
-        if ((dom.HasMember("Person") && dom["Person"].IsObject()) ) {
+        if ((dom.HasMember("Person") && dom["Person"].IsObject())) {
             //这是Person
             Person tmpPerson;
             //Person tmpPerson = any_cast<Person>(myAny);
@@ -294,17 +303,14 @@ int main()
     Address addr1{ "china", "beijing", "wangjing", {p2} };
     Person p1{ "p1", 4, addr1, {f1, f2, f3}, std::string("the kind!") };
 
-
-
     auto json1 = dump(p1);               // 序列化   
-    auto json2 = dump2(p1); 
+    auto json2 = dump2(p1);
     std::cout << "打印序列化结果" << std::endl;
-    std::cout << json1 << std::endl;     // 打印序列化结果
-    std::cout << "打印Person对象" <<std::endl;
+    std::cout << json2 << std::endl;     // 打印序列化结果
+    std::cout << "打印Person对象" << std::endl;
     std::cout << (Any)p1 << std::endl;    // 打印 Person 对象 
-    auto pp = parse(json1);           // 反序列化 
+    auto pp = parse(json2);           // 反序列化 
     std::cout << "反序列化后打印对象" << std::endl;
     std::cout << (Any)pp << std::endl;    // 打印 Person 对象 
     // assert(p1 == pp)                 // 反序列化的结果是对的
 }
-
