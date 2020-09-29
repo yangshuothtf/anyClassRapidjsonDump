@@ -115,68 +115,7 @@ std::string dump(Any myAny) {
     std::string str(buf.GetString());
     return str;
 }
-
-void dumpElements2(Any myAny, Value& tmpValue, Document::AllocatorType& allocator) {
-    if (myAny.type() == typeid(int)) {
-        writer.Key("Int");
-        writer.Int(any_cast<int>(myAny));
-    }
-    else if (myAny.type() == typeid(Person)) {
-        Value personValue;
-        personValue.SetObject();
-        Person tmpPerson = any_cast<Person>(myAny);
-
-        Value nameValue(kStringType);
-        nameValue.SetString(tmpPerson.name.c_str(), allocator);
-        personValue.AddMember("name", nameValue, allocator);
-
-        Value ageValue(kNumberType);
-        ageValue.SetInt(tmpPerson.age);
-        personValue.AddMember("age", ageValue, allocator);
-
-    https://www.cnblogs.com/MenAngel/p/11512882.html
-    http://blog.chinaunix.net/uid-20682147-id-5817728.html#_Toc14481
-    https://blog.csdn.net/u014449046/article/details/79070301
-
-        tmpValue.AddMember("Person", );
-        writer.Key("Person");
-        writer.StartObject();
-        writer.Key("name");
-        writer.String(tmpPerson.name.c_str());
-        writer.Key("age");
-        writer.Int(tmpPerson.age);
-        dumpElements(tmpPerson.address, writer);
-        writer.Key("_friends");
-        writer.StartArray();
-        for (int i = 0; i < tmpPerson._friends.size(); i++) {
-            dumpElements(tmpPerson._friends[i], writer);
-        }
-        writer.EndArray();
-        dumpElements(tmpPerson.secret, writer);
-        writer.EndObject();
-    }
-}
-
-std::string dump2(Any myAny) {
-    Document doc;
-    Document::AllocatorType& allocator = doc.GetAllocator();
-    Value& docValue = doc.SetObject();//实例化一个GenericValue到根DOM
-    dumpElements2(myAny, docValue, allocator);
-
-    Value tempValue1;
-    tempValue1.SetObject();
-
-    tempValue1.SetString(name.c_str(), allocator);
-    doc.AddMember("name", tempValue1, allocator);
-    Value tempValue2(rapidjson::kObjectType);
-    tempValue2.SetString(gender.c_str(), allocator);
-    doc.AddMember("gender", tempValue2, allocator);
-    doc.AddMember("age", age, allocator);
-    Value tempValue3(kArrayType);
-}
 void parseElements(const rapidjson::Value& obj, Any *pAny) {
-    Document d;
-    
     if (pAny->type() == typeid(Person)) {
         const rapidjson::Value& objPerson = obj["Person"];
         Person tmpPerson = any_cast<Person>(*pAny);
@@ -192,43 +131,16 @@ void parseElements(const rapidjson::Value& obj, Any *pAny) {
             parseElements(objAddress, (Any *)(&tmpAddress));
             tmpPerson.address = tmpAddress;
         }
-
         if (objPerson.HasMember("_friends") && objPerson["_friends"].IsArray()) {
             const rapidjson::Value& objFriends = objPerson["_friends"];
-            assert(objFriends.IsArray());
-
-/*            for (SizeType i = 0; i < objFriends.Size(); i++) {
-                if (objFriends[i].IsObject()) {
-                    int i = 0;
-                }
-                Friend tmpFriend;
-                if (objFriends[i].HasMember("relation")) {
-                    int i = 0;
-                }
-                parseElements(objFriends[i], (Any*)(&tmpFriend));
-                tmpPerson._friends.push_back(tmpFriend);
-
-            }*/
-            for (Value::ConstValueIterator itr = objFriends.Begin(); itr != objFriends.End(); ++itr) {
-                Friend tmpFriend;
-                if (itr->HasMember("Friend")) {
-                    int i = 0;
-                }
-                if (itr->HasMember("relation")) {
-                    int i = 0;
-                }
-                parseElements(*itr, (Any*)(&tmpFriend));
+            Friend tmpFriend;
+            for (int i = 0; i < objFriends.Size(); ++i) {
+            //    parseElements(objFriends[i], (Any*)(&tmpFriend));
                 tmpPerson._friends.push_back(tmpFriend);
             }
         }
     }
     else if (pAny->type() == typeid(Friend)) {
-        const rapidjson::Value& objFriend = obj["Friend"];
-        Friend tmpFriend = any_cast<Friend>(*pAny);
-        if (objFriend.HasMember("relation") && objFriend["relation"].IsString()) {
-            tmpFriend.relation = objFriend["relation"].GetString();
-        }
-
     }
 }
 Any parse(string json) {
@@ -239,41 +151,9 @@ Any parse(string json) {
         if ((dom.HasMember("Person") && dom["Person"].IsObject()) ) {
             //这是Person
             Person tmpPerson;
-            const rapidjson::Value& objPerson = dom["Person"];
-            if (objPerson.HasMember("_friends") && objPerson["_friends"].IsArray()) {
-                const rapidjson::Value& objFriends = objPerson["_friends"];
-                Type myType1 = objFriends.GetType();
-                assert(objFriends.IsArray());
-                int aa = objFriends.Size();
-                            for (SizeType i = 0; i < objFriends.Size(); i++) {
-                                Type myType = objFriends[i].GetType();
-
-                                if (objFriends[i].IsObject()) {
-                                    int i = 0;
-                                }
-                                Friend tmpFriend;
-                                if (objFriends[i].HasMember("Friend")) {
-                                    int i = 0;
-                                }
-                                parseElements(objFriends[i], (Any*)(&tmpFriend));
-                                tmpPerson._friends.push_back(tmpFriend);
-
-                            }
-                for (Value::ConstValueIterator itr = objFriends.Begin(); itr != objFriends.End(); ++itr) {
-                    Friend tmpFriend;
-                    if (itr->HasMember("Friend")) {
-                        int i = 0;
-                    }
-                    if (itr->HasMember("relation")) {
-                        int i = 0;
-                    }
-                    parseElements(*itr, (Any*)(&tmpFriend));
-                    tmpPerson._friends.push_back(tmpFriend);
-                }
-            }
-
-
-            parseElements(dom, &((Any)tmpPerson));
+            //Person tmpPerson = any_cast<Person>(myAny);
+            Any pAny = (Any)tmpPerson;
+            parseElements(dom, &pAny);
             myAny = (Any)tmpPerson;
         }
     }
@@ -299,14 +179,3 @@ int main()
     std::cout << (Any)pp << std::endl;    // 打印 Person 对象 
     // assert(p1 == pp)                 // 反序列化的结果是对的
 }
-
-// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
-// 调试程序: F5 或调试 >“开始调试”菜单
-
-// 入门使用技巧: 
-//   1. 使用解决方案资源管理器窗口添加/管理文件
-//   2. 使用团队资源管理器窗口连接到源代码管理
-//   3. 使用输出窗口查看生成输出和其他消息
-//   4. 使用错误列表窗口查看错误
-//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
-//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
