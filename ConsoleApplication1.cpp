@@ -152,11 +152,11 @@ std::string dump(Any myAny) {
     return strBuffer.GetString();
 }
 
-Any parseElements(const rapidjson::Value& obj, const Any& pAny) {
+Any parseElements(const Value& obj, const Any& pAny) {
 	  Any rtnAny;
    if ((obj.HasMember("Person") && obj["Person"].IsObject())) {
  //   if (pAny.type() == typeid(Person)) {
-        const rapidjson::Value& objPerson = obj["Person"];
+        const Value& objPerson = obj["Person"];
         Person tmpPerson;
         if (objPerson.HasMember("name") && objPerson["name"].IsString()) {
             tmpPerson.name = objPerson["name"].GetString();
@@ -165,13 +165,13 @@ Any parseElements(const rapidjson::Value& obj, const Any& pAny) {
             tmpPerson.age = objPerson["age"].GetInt();
         }
         if (objPerson.HasMember("address") && objPerson["address"].IsObject()) {
-            const rapidjson::Value& objAddress = objPerson["address"];
+            const Value& objAddress = objPerson["address"];
             Any tmpAny = (Any)tmpPerson.address;
             parseElements(objAddress, tmpAny);
             tmpPerson.address = any_cast<Address>(tmpAny);
         }
         if (objPerson.HasMember("_friends") && objPerson["_friends"].IsArray()) {
-            const rapidjson::Value& objFriends = objPerson["_friends"];
+            const Value& objFriends = objPerson["_friends"];
             for (int i = 0; i < objFriends.Size(); ++i) {
                 Friend tmpFriend;
                 Any tmpAny = (Any)tmpFriend;
@@ -181,7 +181,7 @@ Any parseElements(const rapidjson::Value& obj, const Any& pAny) {
             }
         }
         if (objPerson.HasMember("secret") && objPerson["secret"].IsObject()) {
-            const rapidjson::Value& objSecret = objPerson["secret"];
+            const Value& objSecret = objPerson["secret"];
             Any tmpAny = (Any)tmpPerson.secret;
             parseElements(objSecret, tmpAny);
             tmpPerson.secret = any_cast<Address>(tmpAny);
@@ -205,17 +205,25 @@ Any parseElements(const rapidjson::Value& obj, const Any& pAny) {
 Any parse(string json) {
     Any myAny;
     rapidjson::Document dom;
-    if (!dom.Parse(json.c_str()).HasParseError()) {
-        //推测对象具体类型
-        if ((dom.HasMember("Person") && dom["Person"].IsObject())) {
-            //这是Person
-            Person tmpPerson;
-            //Person tmpPerson = any_cast<Person>(myAny);
-            Any tmpAny = (Any)tmpPerson;
-            Any rtnAny = parseElements(dom, tmpAny);
-            return rtnAny;
-        }
+    if (dom.Parse(json.c_str()).HasParseError()) {
+    	  return myAny;
+   	}
+    for (Value::ConstMemberIterator iter=dom.MemberBegin(); iter!=dom.MemberEnd(); ++iter) {
+        const Value& name_json = iter->name; // 字符串
+        const Value& value_json = iter->value; // 对象、数组等
+        printf("%s\n", name_json.GetString());
+        Any tmpAny;
+        Any rtnAny = parseElements(value_json, tmpAny);
     }
+/*    //推测对象具体类型
+    if ((dom.HasMember("Person") && dom["Person"].IsObject())) {
+        //这是Person
+        Person tmpPerson;
+        //Person tmpPerson = any_cast<Person>(myAny);
+        Any tmpAny = (Any)tmpPerson;
+        Any rtnAny = parseElements(dom, tmpAny);
+        return rtnAny;
+    }*/
     return myAny;
 }
 int main()
@@ -237,4 +245,4 @@ int main()
     std::cout << "反序列化后打印对象" << std::endl;
     std::cout << (Any)pp << std::endl;    // 打印 Person 对象 
     // assert(p1 == pp)                 // 反序列化的结果是对的
-}  
+}
