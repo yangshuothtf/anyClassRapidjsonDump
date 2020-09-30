@@ -151,10 +151,12 @@ std::string dump(Any myAny) {
     return strBuffer.GetString();
 }
 
-void parseElements(const rapidjson::Value& obj, Any* pAny) {
-    if (pAny->type() == typeid(Person)) {
+Any parseElements(const rapidjson::Value& obj, const Any& pAny) {
+	  Any rtnAny;
+/   if ((obj.HasMember("Person") && obj["Person"].IsObject())) {
+ //   if (pAny.type() == typeid(Person)) {
         const rapidjson::Value& objPerson = obj["Person"];
-        Person tmpPerson = any_cast<Person>(*pAny);
+        Person tmpPerson;
         if (objPerson.HasMember("name") && objPerson["name"].IsString()) {
             tmpPerson.name = objPerson["name"].GetString();
         }
@@ -163,22 +165,41 @@ void parseElements(const rapidjson::Value& obj, Any* pAny) {
         }
         if (objPerson.HasMember("address") && objPerson["address"].IsObject()) {
             const rapidjson::Value& objAddress = objPerson["address"];
-            Address tmpAddress;
-            parseElements(objAddress, (Any*)(&tmpAddress));
-            tmpPerson.address = tmpAddress;
+            Any tmpAny = (Any)tmpPerson.address;
+            parseElements(objAddress, tmpAny);
+            tmpPerson.address = any_cast<Address>(tmpAny);
         }
         if (objPerson.HasMember("_friends") && objPerson["_friends"].IsArray()) {
             const rapidjson::Value& objFriends = objPerson["_friends"];
             for (int i = 0; i < objFriends.Size(); ++i) {
                 Friend tmpFriend;
-                parseElements(objFriends[i], (Any*)(&tmpFriend));
+                Any tmpAny = (Any)tmpFriend;
+                parseElements(objFriends[i], tmpAny);
+                tmpFriend = any_cast<Friend>(tmpAny);
                 tmpPerson._friends.push_back(tmpFriend);
             }
         }
+        if (objPerson.HasMember("secret") && objPerson["secret"].IsObject()) {
+            const rapidjson::Value& objSecret = objPerson["secret"];
+            Any tmpAny = (Any)tmpPerson.secret;
+            parseElements(objSecret, tmpAny);
+            tmpPerson.secret = any_cast<Address>(tmpAny);
+        }
+        return (Any)tmpPerson;
     }
-    else if (pAny->type() == typeid(Friend)) {
-        int i = 0;
+    else if ((obj.HasMember("Friend") && obj["Friend"].IsObject())) {
+//    else if (pAny.type() == typeid(Friend)) {
+        std::cout << "enter Friend" << std::endl;
+        Friend tmpFriend;
+        return (Any)tmpFriend;
     }
+    else if ((obj.HasMember("address") && obj["address"].IsObject())) {
+//    else if (pAny.type() == typeid(Address)) {
+        std::cout << "enter address" << std::endl;
+        Address tmpAddress;
+        return (Any)tmpAddress;
+    }
+    return rtnAny;
 }
 Any parse(string json) {
     Any myAny;
@@ -189,12 +210,11 @@ Any parse(string json) {
             //这是Person
             Person tmpPerson;
             //Person tmpPerson = any_cast<Person>(myAny);
-            Any pAny = (Any)tmpPerson;
-            parseElements(dom, &pAny);
-            myAny = (Any)tmpPerson;
+            Any tmpAny = (Any)tmpPerson;
+            Any rtnAny = parseElements(dom, tmpAny);
+            return rtnAny;
         }
     }
-    std::cout << myAny << std::endl;
     return myAny;
 }
 int main()
@@ -217,3 +237,4 @@ int main()
     std::cout << (Any)pp << std::endl;    // 打印 Person 对象 
     // assert(p1 == pp)                 // 反序列化的结果是对的
 }
+  
